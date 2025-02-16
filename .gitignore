@@ -1,0 +1,10 @@
+# Cruft
+.DS_Store
+__pycache__/
+*.pyc
+
+# Generation
+.env
+
+# Development
+ldbws.json
