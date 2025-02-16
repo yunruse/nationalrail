@@ -22,18 +22,19 @@ poetry install
 poetry run python -m nationalrail --help
 ```
 
-### TODO: building the API spec
+### Building the spec
 
-The API can be automatically built from spec. Hasn't been done yet. Needs work to figure out the breadth of it.
+The API functions and types are automatically built from the spec as `api.py`. Some light transformation is done first.
 
 ```sh
-pip install openapi-generator
-
 CONVERT="https://converter.swagger.io/api/convert"
 SPEC_URL="https://realtime.nationalrail.co.uk/LDBWS/static/ldbws.json"
-HOST="https://lite.realtime.nationalrail.co.uk/OpenLDBWS"
+HOST="https://lite.realtime.nationalrail.co.uk/OpenLDBWS/api/20220120"
+JQ='.servers[0].url = $host | .info.title = "ldbws" | .paths |= with_entries( .key |= sub("^/api/20220120"; ""))'
 
-curl "${CONVERT}?url=${SPEC_URL}" | jq --arg host "$HOST" '.servers[0].url = $host | .info.title = "ldbws"' > ldbws.json
-poetry run openapi-generator-cli generate -g python --additional-properties=packageName=ldbws -i ldbws.json
-# the jq is necessary because the spec references `localhost`
+curl "${CONVERT}?url=${SPEC_URL}" | jq --arg host "$HOST" $JQ > ldbws.json
+
+python tools/wrap_openapi.py ldbws.json > nationalrail/api.py 
 ```
+
+Note that `wrap_openapi.py` is not feature-complete; it might need a lot of work to adapt to your own purposes.

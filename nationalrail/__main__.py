@@ -1,8 +1,10 @@
-from enum import IntEnum
 from requests import get
 
 from argparse import ArgumentParser
 from rich import print
+
+from . import api
+from .helpers import EXIT_CODES, exit
 
 parser = ArgumentParser('python -m nationalrail')
 parser.add_argument(
@@ -16,59 +18,81 @@ parser.add_argument(
     '--compress-delay',
     dest='show_orig_time', action='store_false',
     help="Display train time in red, without the original time.")
+parser.add_argument(
+    '--calling',
+    default=None, const='line',
+    nargs='?', choices=['list', 'line'], metavar='list',
+    help="Show intermediary stations (either on a line or on multiple lines with details)")
 
 
-BASE = 'https://lite.realtime.nationalrail.co.uk/OpenLDBWS/api/20220120'
-DEPARTURES = BASE + '/GetDepartureBoard/{origin}'
-
-class EXIT_CODES(IntEnum):
-    BAD_AUTH = 3
-    NO_SERVICES = 4
-
-def time_sig(service: dict, show_orig_time: bool):
+def time_sig(service: api.ServiceItem, show_orig_time: bool):
     std = service['std']
     etd = service['etd']
     
     if etd == 'On time':
         return f'[bold green]{std}[/]'
-    elif show_orig_time:
-        return f'[bold red]{std} (est. {etd})[/]'
+    elif etd == 'Cancelled':
+        if show_orig_time:
+            return f'[bold red]{std} (CANCELLED)[/]'
+        else:
+            return f'[bold red]XX:XX[/]'
     else:
-        return f'[bold red]{etd}[/]'
-    
-Station = dict
+        if show_orig_time:
+            return f'[bold red]{std} (est. {etd})[/]'
+        else:
+            return f'[bold red]{etd}[/]'
 
-def station_name(stations: list[Station], show_crs: bool):
-    if len(stations) > 1:
-        raise NotImplementedError('Multiple stations not yet supported')
-    s = stations[0]
-    return s['crs'] if show_crs else s['locationName']
+def station_name(station: api.CallingPoint, show_crs: bool):
+    return station['crs'] if show_crs else station['locationName']
+
+def stations_name(stations: list[api.CallingPoint], show_crs: bool):
+    return ', '.join(station_name(s, show_crs) for s in stations)
+
+def calling_points(points: list[api.CallingPoint], show_crs: bool, expanded: bool = True):
+    if expanded:
+        return '\n'.join(f'  - {p['st']} [cyan]{station_name(p, show_crs)}[/] ' for p in points)
+    else:
+        return ', '.join(f'[cyan]{station_name(p, show_crs)}[/] {p['st']}' for p in points)
 
 def disseminate(
-    json: dict,
+    board: api.StationBoard | api.StationBoardWithDetails,
     show_orig_time: bool,
-    show_crs: bool
+    show_crs: bool,
+    next_stations: bool,
+    expand_stops: bool = True,
 ):
-    locName = json.get('locationName')
-    services = json.get('trainServices', [])
+    locName = board.get('locationName')
+    services = board.get('trainServices', [])
 
-    if not services or not json.get('areServicesAvailable', False):
+    if not services or not board.get('areServicesAvailable', False):
         print(f"[bold red]No services are available[/] for [bold cyan]{locName}[/].")
-        exit(EXIT_CODES.NO_SERVICES)
+        exit(EXIT_CODES.NO_SERVICES, "")
 
-    print(f"Services for [bold cyan]{locName}[/]:")
+    print(f"Services from [bold cyan]{locName}[/]:")
 
     for service in services:
         ts = time_sig(service, show_orig_time)
-        orig = station_name(service['origin'], show_crs)
-        dest = station_name(service['destination'], show_crs)
+        orig = stations_name(service['origin'], show_crs)
+        platform = ''
+        if p := service.get('platform'):
+            platform = f'[purple italic]Platform {p:<3}[/] '
+        dest = stations_name(service['destination'], show_crs)
+
+        arrival = ''
+        nextStations = service.get('subsequentCallingPoints', [{}])[0].get('callingPoint', [])
+        if nextStations:
+            dest2 = nextStations[-1]
+            arrival = f' {dest2['st']}'
         
-        print(f'- {ts} {orig} -> [bold cyan]{dest}[/]')
+        print(f'- {ts} {platform}{orig} -> [bold cyan]{dest}[/]{arrival}')
+        # TODO: service.get('formation')
 
-    # TODO: disseminate.
-    # nrccMessages looks useful too!
+        if next_stations and len(nextStations) > 1:
+            if not expand_stops:
+                print('    [bold] stopping at:[/] ', end='')
+            print(calling_points(nextStations[:-1], show_crs, expanded=expand_stops))
 
-    if nrcc := json.get('nrccMessages'):
+    if nrcc := board.get('nrccMessages'):
         print('[bold red]Advisories[/]')
         for msg in nrcc:
             print(' - ' + msg['Value'].strip())
@@ -89,10 +113,10 @@ def fetch(url):
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    
-    url = DEPARTURES.format(origin=args.origin.upper())
-    json = fetch(url)
 
-    disseminate(json, show_orig_time=args.show_orig_time, show_crs=args.show_crs)
-    services = json.get('trainServices', [])
+    result = api.GetDepBoardWithDetails(args.origin.upper())
+    # TODO: other station shenaniganseries
+
+    disseminate(result, show_orig_time=args.show_orig_time, show_crs=args.show_crs, next_stations=args.calling is not None, expand_stops=args.calling == 'list')
+    services = result.get('trainServices', [])
     service = services[0]
