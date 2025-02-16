@@ -1,9 +1,9 @@
 [project]
 name = "nationalrail"
-version = "0.0.0"
+version = "0.1.0"
 description = "A Python API for National Rail's services, using their modern RESTful Live Departure Boards Web Service (LDBWS) API."
 authors = [{ name = "Mia yun Ruse", email = "mia@yunru.se" }]
-license = { text = "NONE YET" }
+license = "CC0-1.0"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["requests (>=2.32.3,<3.0.0)", "python-dotenv (>=1.0.1,<2.0.0)"]

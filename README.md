@@ -2,7 +2,7 @@
 
 ![Powered by National Rail Enquiries"](NRE_Powered_logo.png)
 
-A Python API for fetching train timetables in the UK, using the modern RESTful API.
+A [public domain](https://creativecommons.org/publicdomain/zero/1.0/) Python API for fetching train timetables in the UK, using the modern RESTful API.
 
 ## Usage
 
