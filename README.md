@@ -1,8 +1,8 @@
 # nationalrail
 
-A Python API for National Rail's services, using their modern RESTful Live Departure Boards Web Service (LDBWS) API.
+![Powered by National Rail Enquiries"](NRE_Powered_logo.png)
 
-This project is not endorsed by National Rail. It is currently unlicensed, as it is in development.
+A Python API for fetching train timetables in the UK, using the modern RESTful API.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Run as `python -m nationalrail STATION`.
 
 Presently, only departure boards are shown, and they require the CRS (eg `KGX` instead of `"King's Cross"`).
 
-## Developer
+## Development
 
 Install with Poetry:
 
