@@ -55,7 +55,7 @@ class ServiceItem(TypedDict):
     isCancelled: bool
     filterLocationCancelled: bool
     serviceType: Literal['train', 'bus', 'ferry']
-    length: str
+    length: int
     detachFront: bool
     isReverseFormation: bool
     cancelReason: str
@@ -64,7 +64,7 @@ class ServiceItem(TypedDict):
     adhocAlerts: list[str]
 
 class XmlSerializerNamespaces(TypedDict):
-    Count: str
+    Count: int
 
 class NRCCMessage(TypedDict):
     Value: str
@@ -81,7 +81,7 @@ class ServiceItemDiversion(TypedDict):
     reason: str
     divertedVia: str
     between: 'ServiceItemDiversionBetween'
-    rerouteDelay: str
+    rerouteDelay: int
 
 class ServiceLocation(TypedDict):
     locationName: str
@@ -99,7 +99,7 @@ class LoadingCategory(TypedDict):
 class CoachData(TypedDict):
     coachClass: str
     toilet: 'ToiletAvailabilityType'
-    loading: str
+    loading: int
     loadingSpecified: bool
     number: str
 
@@ -159,7 +159,7 @@ class ServiceItemWithCallingPoints(TypedDict):
     isCancelled: bool
     filterLocationCancelled: bool
     serviceType: Literal['train', 'bus', 'ferry']
-    length: str
+    length: int
     detachFront: bool
     isReverseFormation: bool
     cancelReason: str
@@ -182,14 +182,14 @@ class CallingPoint(TypedDict):
     et: str
     at: str
     isCancelled: bool
-    length: str
+    length: int
     detachFront: bool
     formation: 'FormationData'
     adhocAlerts: list[str]
     cancelReason: str
     delayReason: str
     affectedByDiversion: bool
-    rerouteDelay: str
+    rerouteDelay: int
 
 class DeparturesBoard(TypedDict):
     departures: list['DepartureItem']
@@ -241,7 +241,7 @@ class ServiceDetails(TypedDict):
     cancelReason: str
     delayReason: str
     overdueMessage: str
-    length: str
+    length: int
     detachFront: bool
     isReverseFormation: bool
     platform: str

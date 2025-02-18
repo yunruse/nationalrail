@@ -43,7 +43,7 @@ def resolve_type(schema) -> type:
         case "string":
             return ast.Name('str')
         case "integer":
-            return ast.Name('str')
+            return ast.Name('int')
         case "boolean":
             return ast.Name('bool')
         case "array":
