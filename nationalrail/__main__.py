@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from rich import print
 
 from . import api
+from requests.exceptions import HTTPError
 from .helpers import EXIT_CODES, exit
 
 parser = ArgumentParser('python -m nationalrail')
@@ -114,7 +115,19 @@ def fetch(url):
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    result = api.GetDepBoardWithDetails(args.origin.upper())
+    try:
+        result = api.GetDepBoardWithDetails(args.origin.upper())
+    except HTTPError as err:
+        msg = f"FATAL: HTTP error https://http.cat/{err.response.status_code}  {err.response.reason}."
+        if err.response.status_code == 401:
+            exit(EXIT_CODES.BAD_AUTH, f"{msg}\nDid you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration")
+
+        if err.response.status_code == 400:
+            api_msg = err.response.json().get('Message', 'Unknown error')
+            exit(2, f'FATAL: {api_msg}')
+
+        exit(1, f"{msg}Try again?")
+
     # TODO: other station shenaniganseries
 
     disseminate(result, show_orig_time=args.show_orig_time, show_crs=args.show_crs, next_stations=args.calling is not None, expand_stops=args.calling == 'list')
