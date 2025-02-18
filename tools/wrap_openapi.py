@@ -29,6 +29,7 @@ def api_func(old_func):
     return new_func
 '''
 
+
 def resolve_type(schema) -> type:
     if '$ref' in schema:
         return ast.Constant(schema.get('$ref').removeprefix('#/components/schemas/'))
@@ -62,6 +63,7 @@ def resolve_type(schema) -> type:
 #     "An object type held in a TypedDictSpec."
 #     pass
 
+
 @dataclass
 class TypedDictSpec:
     "A typeddict defined by a schema; typically that returned by an API call."
@@ -71,7 +73,8 @@ class TypedDictSpec:
     @classmethod
     def from_api_spec(cls, name: str, prop_spec: dict):
         assert prop_spec['type'] == 'object'
-        properties = {k: resolve_type(v) for k, v in prop_spec.get('properties').items()}
+        properties = {k: resolve_type(v)
+                      for k, v in prop_spec.get('properties').items()}
         return cls(name, properties)
 
     @property
@@ -80,7 +83,7 @@ class TypedDictSpec:
             ast.AnnAssign(ast.Name(k), v, simple=1)
             for k, v in self.properties.items()
         ]
-    
+
     def as_ast(self):
         return ast.ClassDef(
             self.name,
@@ -90,6 +93,7 @@ class TypedDictSpec:
             decorator_list=[],
             type_params=[],
         )
+
 
 @dataclass
 class FuncArg:
@@ -111,7 +115,7 @@ class FuncArg:
                 return str
             case "integer":
                 return int
-        
+
         return NotImplemented
 
     @classmethod
@@ -128,11 +132,12 @@ class FuncArg:
 
     def as_ast(self):
         return ast.arg(self.name)
-    
+
     def default_ast(self):
         if self.default == "null":
             return ast.Constant(None)
         return ast.Constant(self.default)
+
 
 @dataclass
 class ApiCall:
@@ -150,18 +155,19 @@ class ApiCall:
         return '_'.join([
             seg for seg in url.split('/') if not seg.startswith('{')
         ])
-    
+
     @property
     def arguments(self):
         # NOTE: This assumes required params come first!
         return ast.arguments(
             args=[p.as_ast() for p in self.parameters],
-            defaults=[p.default_ast() for p in self.parameters if not p.required],
+            defaults=[p.default_ast()
+                      for p in self.parameters if not p.required],
             posonlyargs=[],
             kwonlyargs=[],
             kw_defaults=[]
         )
-    
+
     @property
     def body(self) -> list[ast.stmt]:
         url_args = [p.name for p in self.parameters if p.in_path]
@@ -187,7 +193,7 @@ class ApiCall:
                 )
             ]))
         ]
-    
+
     @property
     def returns(self) -> ast.expr:
         "The return type."
@@ -196,7 +202,8 @@ class ApiCall:
         ok_resp = self.response_spec.get('200', {})
         if not ok_resp:
             return ast.Constant('None')
-        return_schema = ok_resp.get('content', {}).get('application/json', {}).get('schema', {})
+        return_schema = ok_resp.get('content', {}).get(
+            'application/json', {}).get('schema', {})
         if '$ref' not in return_schema:
             # TODO: handle anonymous return types which don't reference a schema
             raise NotImplementedError('anon types not yet ok')
@@ -215,6 +222,7 @@ class ApiCall:
             returns=self.returns
         )
 
+
 def generate_code(schema: dict):
     objs: list[TypedDictSpec] = []
     obj_specs = schema.get('components', {}).get('schemas', {})
@@ -227,8 +235,9 @@ def generate_code(schema: dict):
             desc = path_spec.get('description')
             params = [FuncArg.from_api_spec(s)
                       for s in path_spec.get('parameters', [])]
-            funcs.append(ApiCall(path, method, desc, params, path_spec.get('responses')))
-    
+            funcs.append(ApiCall(path, method, desc, params,
+                         path_spec.get('responses')))
+
     body = []
     body.append(ast.Assign(
         [ast.Name('__all__')],
@@ -240,6 +249,7 @@ def generate_code(schema: dict):
         body.append(func.as_ast())
 
     return ast.unparse(ast.fix_missing_locations(ast.Module(body, [])))
+
 
 if __name__ == '__main__':
     args = parser.parse_args()

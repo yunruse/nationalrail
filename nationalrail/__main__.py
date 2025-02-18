@@ -29,7 +29,7 @@ parser.add_argument(
 def time_sig(service: api.ServiceItem, show_orig_time: bool):
     std = service['std']
     etd = service['etd']
-    
+
     if etd == 'On time':
         return f'[bold green]{std}[/]'
     elif etd == 'Cancelled':
@@ -43,17 +43,21 @@ def time_sig(service: api.ServiceItem, show_orig_time: bool):
         else:
             return f'[bold red]{etd}[/]'
 
+
 def station_name(station: api.CallingPoint, show_crs: bool):
     return station['crs'] if show_crs else station['locationName']
 
+
 def stations_name(stations: list[api.CallingPoint], show_crs: bool):
     return ', '.join(station_name(s, show_crs) for s in stations)
+
 
 def calling_points(points: list[api.CallingPoint], show_crs: bool, expanded: bool = True):
     if expanded:
         return '\n'.join(f'  - {p['st']} [cyan]{station_name(p, show_crs)}[/] ' for p in points)
     else:
         return ', '.join(f'[cyan]{station_name(p, show_crs)}[/] {p['st']}' for p in points)
+
 
 def disseminate(
     board: api.StationBoard | api.StationBoardWithDetails,
@@ -66,7 +70,8 @@ def disseminate(
     services = board.get('trainServices', [])
 
     if not services or not board.get('areServicesAvailable', False):
-        print(f"[bold red]No services are available[/] for [bold cyan]{locName}[/].")
+        print(
+            f"[bold red]No services are available[/] for [bold cyan]{locName}[/].")
         exit(EXIT_CODES.NO_SERVICES, "")
 
     print(f"Services from [bold cyan]{locName}[/]:")
@@ -80,23 +85,26 @@ def disseminate(
         dest = stations_name(service['destination'], show_crs)
 
         arrival = ''
-        nextStations = service.get('subsequentCallingPoints', [{}])[0].get('callingPoint', [])
+        nextStations = service.get('subsequentCallingPoints', [{}])[
+            0].get('callingPoint', [])
         if nextStations:
             dest2 = nextStations[-1]
             arrival = f' {dest2['st']}'
-        
+
         print(f'- {ts} {platform}{orig} -> [bold cyan]{dest}[/]{arrival}')
         # TODO: service.get('formation')
 
         if next_stations and len(nextStations) > 1:
             if not expand_stops:
                 print('    [bold] stopping at:[/] ', end='')
-            print(calling_points(nextStations[:-1], show_crs, expanded=expand_stops))
+            print(calling_points(
+                nextStations[:-1], show_crs, expanded=expand_stops))
 
     if nrcc := board.get('nrccMessages'):
         print('[bold red]Advisories[/]')
         for msg in nrcc:
             print(' - ' + msg['Value'].strip())
+
 
 def fetch(url):
     from os import getenv
@@ -108,9 +116,11 @@ def fetch(url):
     if req.status_code == 401:
         parser.exit(EXIT_CODES.BAD_AUTH, "ERROR: Unauthorized. Did you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration\n")
     if req.status_code != 200:
-        parser.exit(1, f"ERROR: https://http.cat/{req.status_code}. Try again. \n")
+        parser.exit(
+            1, f"ERROR: https://http.cat/{req.status_code}. Try again. \n")
 
     return req.json()
+
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -120,7 +130,8 @@ if __name__ == '__main__':
     except HTTPError as err:
         msg = f"FATAL: HTTP error https://http.cat/{err.response.status_code}  {err.response.reason}."
         if err.response.status_code == 401:
-            exit(EXIT_CODES.BAD_AUTH, f"{msg}\nDid you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration")
+            exit(EXIT_CODES.BAD_AUTH,
+                 f"{msg}\nDid you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration")
 
         if err.response.status_code == 400:
             api_msg = err.response.json().get('Message', 'Unknown error')
@@ -130,6 +141,7 @@ if __name__ == '__main__':
 
     # TODO: other station shenaniganseries
 
-    disseminate(result, show_orig_time=args.show_orig_time, show_crs=args.show_crs, next_stations=args.calling is not None, expand_stops=args.calling == 'list')
+    disseminate(result, show_orig_time=args.show_orig_time, show_crs=args.show_crs,
+                next_stations=args.calling is not None, expand_stops=args.calling == 'list')
     services = result.get('trainServices', [])
     service = services[0]
