@@ -18,3 +18,6 @@ exclude = [".env", "ldbws.json", "tools/"]
 
 [tool.poetry.group.cli.dependencies]
 rich = "^13.9.4"
+
+[tool.poetry.group.dev.dependencies]
+openapi-transmog = "^0.1.0"

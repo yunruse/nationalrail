@@ -24,7 +24,7 @@ poetry run python -m nationalrail --help
 
 ### Building the spec
 
-The API functions and types are automatically built from the spec as `api.py`. Some light transformation is done first.
+The API is built from spec using [`openapi-transmog`](https://github.com/yunruse/openapi-transmog).
 
 ```sh
 CONVERT="https://converter.swagger.io/api/convert"
@@ -34,7 +34,5 @@ JQ='.servers[0].url = $host | .info.title = "ldbws" | .paths |= with_entries( .k
 
 curl "${CONVERT}?url=${SPEC_URL}" | jq --arg host "$HOST" $JQ > ldbws.json
 
-python tools/wrap_openapi.py ldbws.json > nationalrail/api.py 
+python -m openapi-transmog ldbws.json --auth 'token' '$LDBWS_TOKEN' > nationalrail/api.py
 ```
-
-Note that `wrap_openapi.py` is not feature-complete; it might need a lot of work to adapt to your own purposes.
