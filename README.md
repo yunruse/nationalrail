@@ -10,7 +10,7 @@ A [public domain](https://creativecommons.org/publicdomain/zero/1.0/) Python API
 
 Run as `python -m nationalrail STATION`.
 
-Presently, only departure boards are shown, and they require the CRS (eg `KGX` instead of `"King's Cross"`).
+This can take a station code (eg `KGX`) or a name (eg `'king's cross london'`).
 
 ## Development
 
@@ -36,3 +36,12 @@ curl "${CONVERT}?url=${SPEC_URL}" | jq --arg host "$HOST" $JQ > ldbws.json
 
 python -m openapi-transmog ldbws.json --auth 'token' '$LDBWS_TOKEN' > nationalrail/api.py
 ```
+
+In addition, the rail database should be downloaded and un-gzipped:
+
+```sh
+CORPUS="https://publicdatafeeds.networkrail.co.uk/ntrod/SupportingFileAuthenticate?type=CORPUS"
+# download and unzip
+jq '.TIPLOCDATA | map(select(.["3ALPHA"] != " ")) | map({(.NLCDESC | ascii_downcase): .["3ALPHA"]}) | add' corpus.json > nationalrail/lookup.json
+```
+
