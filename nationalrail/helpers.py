@@ -12,3 +12,4 @@ def exit(code: int, reason: str):
 class EXIT_CODES(IntEnum):
     BAD_AUTH = 3
     NO_SERVICES = 4
+    BAD_CRS = 5

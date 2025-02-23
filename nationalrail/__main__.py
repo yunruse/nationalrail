@@ -1,16 +1,32 @@
-from requests import get
 
 from argparse import ArgumentParser
-from rich import print
+
+from requests import get
+from rich.console import Console
 
 from . import api
 from requests.exceptions import HTTPError
 from .helpers import EXIT_CODES, exit
 
+
 parser = ArgumentParser('python -m nationalrail')
-parser.add_argument(
-    "origin",
-    help="Must be the three-letter code, eg KGX.")
+
+parser_s = parser.add_argument_group(
+    'Stations',
+    """
+    These may be the three-letter code (eg KGX) or the name (eg "king's cross london").
+    In general the former is less error-prone. You can find it by searching for your station on https://wikidata.org.
+    """
+)
+parser_s.add_argument(
+    "orig",
+    help="The station to depart from.")
+
+# TODO: figure out nargs='*' api stuff for crslist!
+parser_s.add_argument(
+    "dest", nargs='?',
+    help="The station to arrive at. If not provided, only departures are shown.")
+
 parser.add_argument(
     '--crs',
     dest='show_crs', action='store_true',
@@ -24,6 +40,8 @@ parser.add_argument(
     default=None, const='line',
     nargs='?', choices=['list', 'line'], metavar='list',
     help="Show intermediary stations (either on a line or on multiple lines with details)")
+
+console = Console()
 
 
 def time_sig(service: api.ServiceItem, show_orig_time: bool):
@@ -66,15 +84,19 @@ def disseminate(
     next_stations: bool,
     expand_stops: bool = True,
 ):
-    locName = board.get('locationName')
+    srcName = board.get('locationName')
     services = board.get('trainServices', [])
 
+    if dstName := board.get('filterLocationName'):
+        journey = f'from [bold cyan]{srcName}[/] to [bold cyan]{dstName}[/]'
+    else:
+        journey = f'from [bold cyan]{srcName}[/]'
+
     if not services or not board.get('areServicesAvailable', False):
-        print(
-            f"[bold red]No services are available[/] for [bold cyan]{locName}[/].")
+        console.print(f"[bold red]No services are available[/] {journey}.")
         exit(EXIT_CODES.NO_SERVICES, "")
 
-    print(f"Services from [bold cyan]{locName}[/]:")
+    console.print(f'Services {journey}:')
 
     for service in services:
         ts = time_sig(service, show_orig_time)
@@ -91,50 +113,48 @@ def disseminate(
             dest2 = nextStations[-1]
             arrival = f' {dest2['st']}'
 
-        print(f'- {ts} {platform}{orig} -> [bold cyan]{dest}[/]{arrival}')
+        console.print(f'- {ts} {platform}{orig} -> [bold cyan]{dest}[/]{arrival}')
         # TODO: service.get('formation')
 
         if next_stations and len(nextStations) > 1:
             if not expand_stops:
-                print('    [bold] stopping at:[/] ', end='')
-            print(calling_points(
+                console.print('    [bold] stopping at:[/] ', end='')
+            console.print(calling_points(
                 nextStations[:-1], show_crs, expanded=expand_stops))
 
     if nrcc := board.get('nrccMessages'):
-        print('[bold red]Advisories[/]')
+        console.print('[bold red]Advisories[/]')
         for msg in nrcc:
-            print(' - ' + msg['Value'].strip())
+            console.print(' - ' + msg['Value'].strip())
 
 
-def fetch(url):
-    from os import getenv
-    from dotenv import load_dotenv
-    load_dotenv()
-    auth = ('token', getenv('LDBWS_TOKEN'))
-
-    req = get(url, auth=auth)
-    if req.status_code == 401:
-        parser.exit(EXIT_CODES.BAD_AUTH, "ERROR: Unauthorized. Did you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration\n")
-    if req.status_code != 200:
-        parser.exit(
-            1, f"ERROR: https://http.cat/{req.status_code}. Try again. \n")
-
-    return req.json()
+def get_result(args):
+    if args.dest is None:
+        return api.GetDepBoardWithDetails(args.orig)
+    else:
+        # TODO: handle filterCrs on the api level rather than this hack!
+        dest = api.get_crs(args.dest)
+        return api.GetDepBoardWithDetails(args.orig, filterCrs=dest)
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        result = api.GetDepBoardWithDetails(args.origin.upper())
+        result = get_result(args)
     except HTTPError as err:
         msg = f"FATAL: HTTP error https://http.cat/{err.response.status_code}  {err.response.reason}."
         if err.response.status_code == 401:
-            exit(EXIT_CODES.BAD_AUTH,
-                 f"{msg}\nDid you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration")
+            exit(
+                EXIT_CODES.BAD_AUTH,
+                f"{msg}\nDid you set a LDBWS_TOKEN? You can obtain one from: http://realtime.nationalrail.co.uk/OpenLDBWSRegistration")
 
         if err.response.status_code == 400:
             api_msg = err.response.json().get('Message', 'Unknown error')
+            if api_msg == 'Invalid crs code supplied':
+                exit(
+                    EXIT_CODES.BAD_CRS,
+                    'FATAL: The station code(s) you provided were not recognised. Try looking up your station at https://wikidata.org to get the three-letter code (eg KGX).')
             exit(2, f'FATAL: {api_msg}')
 
         exit(1, f"{msg}Try again?")
