@@ -1,7 +1,8 @@
 from pathlib import Path
 from json import loads
 
-LOOKUP: dict[str, str] = loads(Path('nationalrail/lookup.json').read_text())
+LOOKUP_FILE = Path(__file__).parent / 'lookup.json'
+LOOKUP: dict[str, str] = loads(LOOKUP_FILE.read_text())
 
 
 @+GetDepartureBoard('crs')
