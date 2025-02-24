@@ -11,6 +11,9 @@ def get_crs(crs_or_station_name: str):
     if stat in LOOKUP:
         return LOOKUP[stat]
     return crs_or_station_name
+
+def entirely_hidden():
+    pass
 from typing import TypedDict, Literal
 from os.path import expandvars
 from requests import request
@@ -263,127 +266,115 @@ def api_call(method: str, url: str, params: dict, annotators: dict={}):
     response.raise_for_status()
     return response.json()
 
-def GetDepartureBoard(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoard:
+def GetDepartureBoard(departing_from: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoard:
     """
     Returns all public departures for the supplied CRS code within a defined time window.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetDepartureBoard/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetDepartureBoard/{crs}'.format(crs=get_crs(departing_from)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetArrivalBoard(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoard:
+def GetArrivalBoard(arriving_at: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoard:
     """
     Returns all public arrivals for the supplied CRS code within a defined time window.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param arriving_at: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetArrivalBoard/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetArrivalBoard/{crs}'.format(crs=get_crs(arriving_at)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetArrivalDepartureBoard(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoard:
+def GetArrivalDepartureBoard(station: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoard:
     """
     Returns all public arrivals and departures for the supplied CRS code within a defined time window
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param station: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetArrivalDepartureBoard/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetArrivalDepartureBoard/{crs}'.format(crs=get_crs(station)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetArrBoardWithDetails(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
+def GetArrBoardWithDetails(arriving_at: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
     """
     Returns all public arrivals for the supplied CRS code within a defined time window, including service details.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param arriving_at: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetArrBoardWithDetails/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetArrBoardWithDetails/{crs}'.format(crs=get_crs(arriving_at)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetDepBoardWithDetails(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
+def GetDepBoardWithDetails(departing_from: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
     """
     Returns all public departures for the supplied CRS code within a defined time window, including service details.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetDepBoardWithDetails/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetDepBoardWithDetails/{crs}'.format(crs=get_crs(departing_from)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetArrDepBoardWithDetails(crs_or_station_name: str, numRows: int=10, filterCrs: str=None, filterType: Literal['to', 'from']='to', timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
+def GetArrDepBoardWithDetails(station: str, numRows: int=10, timeOffset: int=0, timeWindow: int=120) -> StationBoardWithDetails:
     """
     Returns all public arrivals and departures for the supplied CRS code within a defined time window, including service details.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param station: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param numRows: The number of services to return in the resulting station board.
-    :param filterCrs: The CRS code of either an origin or destination location to filter in. Optional.
-    :param filterType: The type of filter to apply. Filters services to include only those originating or terminating at the filterCrs location. Defaults to 'to'. Optional.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetArrDepBoardWithDetails/{crs}'.format(crs=get_crs(crs_or_station_name)), {'numRows': numRows, 'filterCrs': filterCrs, 'filterType': filterType, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetArrDepBoardWithDetails/{crs}'.format(crs=get_crs(station)), {'numRows': numRows, 'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetFastestDepartures(crs_or_station_name: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoard:
+def GetFastestDepartures(departing_from: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoard:
     """
     Returns the public departure for the supplied CRS code within a defined time window to the locations specified in the filter with the earliest arrival time at the filtered location.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param filterList: A list of CRS codes of the destinations location to filter, at least 1 but not greater than 15 must be supplied.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetFastestDepartures/{crs}/{filterList}'.format(crs=get_crs(crs_or_station_name), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetFastestDepartures/{crs}/{filterList}'.format(crs=get_crs(departing_from), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetFastestDeparturesWithDetails(crs_or_station_name: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoardWithDetails:
+def GetFastestDeparturesWithDetails(departing_from: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoardWithDetails:
     """
     Returns the public departure for the supplied CRS code within a defined time window to the locations specified in the filter with the earliest arrival time at the filtered location, including service details.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param filterList: A list of CRS codes of the destinations location to filter, at least 1 but not greater than 10 must be supplied.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetFastestDeparturesWithDetails/{crs}/{filterList}'.format(crs=get_crs(crs_or_station_name), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetFastestDeparturesWithDetails/{crs}/{filterList}'.format(crs=get_crs(departing_from), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetNextDepartures(crs_or_station_name: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoard:
+def GetNextDepartures(departing_from: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoard:
     """
     Returns the next public departure for the supplied CRS code within a defined time window to the locations specified in the filter.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param filterList: A list of CRS codes of the destinations location to filter, at least 1 but not greater than 25 must be supplied.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetNextDepartures/{crs}/{filterList}'.format(crs=get_crs(crs_or_station_name), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetNextDepartures/{crs}/{filterList}'.format(crs=get_crs(departing_from), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
-def GetNextDeparturesWithDetails(crs_or_station_name: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoardWithDetails:
+def GetNextDeparturesWithDetails(departing_from: str, filterList: str, timeOffset: int=0, timeWindow: int=120) -> DeparturesBoardWithDetails:
     """
     Returns the next public departure for the supplied CRS code within a defined time window to the locations specified in the filter, including service details.
 
-    :param crs_or_station_name: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
+    :param departing_from: The CRS code of the location for which the request is being made. The CRS code must be passed as UPPERCASE
     :param filterList: A list of CRS codes of the destinations location to filter, at least 1 but not greater than 10 must be supplied.
     :param timeOffset: An offset in minutes against the current time to provide the station board for. Defaults to 0. Optional.
     :param timeWindow: How far into the future in minutes, relative to timeOffset, to return services for.
     """
-    return api_call('get', '/GetNextDeparturesWithDetails/{crs}/{filterList}'.format(crs=get_crs(crs_or_station_name), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
+    return api_call('get', '/GetNextDeparturesWithDetails/{crs}/{filterList}'.format(crs=get_crs(departing_from), filterList=filterList), {'timeOffset': timeOffset, 'timeWindow': timeWindow}, {})
 
 def GetServiceDetails(serviceId: str) -> ServiceDetails:
     """

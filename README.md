@@ -24,7 +24,9 @@ poetry run python -m nationalrail --help
 
 ### Building the spec
 
-The API is built from spec using [`openapi-transmog`](https://github.com/yunruse/openapi-transmog).
+`api.py` is transpiled from spec using [`openapi-transmog`](https://github.com/yunruse/openapi-transmog).
+
+**Note for developers: this presently uses developmental versions of `openapi-transmog`!**
 
 ```sh
 CONVERT="https://converter.swagger.io/api/convert"

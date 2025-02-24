@@ -1,7 +1,6 @@
 
 from argparse import ArgumentParser
 
-from requests import get
 from rich.console import Console
 
 from . import api
@@ -77,11 +76,16 @@ def calling_points(points: list[api.CallingPoint], show_crs: bool, expanded: boo
         return ', '.join(f'[cyan]{station_name(p, show_crs)}[/] {p['st']}' for p in points)
 
 
+def next_stations(service: api.ServiceItemWithCallingPoints):
+    return service.get('subsequentCallingPoints', [{}])[0].get('callingPoint', [])
+
+
 def disseminate(
     board: api.StationBoard | api.StationBoardWithDetails,
     show_orig_time: bool,
     show_crs: bool,
-    next_stations: bool,
+    show_next_stations: bool,
+    dest: str = None,
     expand_stops: bool = True,
 ):
     srcName = board.get('locationName')
@@ -104,23 +108,29 @@ def disseminate(
         platform = ''
         if p := service.get('platform'):
             platform = f'[purple italic]Platform {p:<3}[/] '
-        dest = stations_name(service['destination'], show_crs)
 
-        arrival = ''
-        nextStations = service.get('subsequentCallingPoints', [{}])[
-            0].get('callingPoint', [])
-        if nextStations:
-            dest2 = nextStations[-1]
-            arrival = f' {dest2['st']}'
+        next = next_stations(service)
+        final = next[-1]
+        for p in next:
+            if p['crs'] == dest and p != final:
+                dest_strings = [
+                    f'[bold cyan]{station_name(p, show_crs)}[/] {p['st']}',
+                    station_name(final, show_crs)
+                ]
+                break
+        else:
+            dest_strings = [
+                f'[bold cyan]{station_name(final, show_crs)}[/] {final['st']}'
+            ]
+        console.print(f'- {ts} {platform}{orig} -> {' -> '.join(dest_strings)}')
 
-        console.print(f'- {ts} {platform}{orig} -> [bold cyan]{dest}[/]{arrival}')
         # TODO: service.get('formation')
 
-        if next_stations and len(nextStations) > 1:
+        if show_next_stations and len(next) > 1:
             if not expand_stops:
                 console.print('    [bold] stopping at:[/] ', end='')
             console.print(calling_points(
-                nextStations[:-1], show_crs, expanded=expand_stops))
+                next[:-1], show_crs, expanded=expand_stops))
 
     if nrcc := board.get('nrccMessages'):
         console.print('[bold red]Advisories[/]')
@@ -128,20 +138,11 @@ def disseminate(
             console.print(' - ' + msg['Value'].strip())
 
 
-def get_result(args):
-    if args.dest is None:
-        return api.GetDepBoardWithDetails(args.orig)
-    else:
-        # TODO: handle filterCrs on the api level rather than this hack!
-        dest = api.get_crs(args.dest)
-        return api.GetDepBoardWithDetails(args.orig, filterCrs=dest)
-
-
 if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        result = get_result(args)
+        result = api.GetDepBoardWithDetails(args.orig)
     except HTTPError as err:
         msg = f"FATAL: HTTP error https://http.cat/{err.response.status_code}  {err.response.reason}."
         if err.response.status_code == 401:
@@ -159,9 +160,22 @@ if __name__ == '__main__':
 
         exit(1, f"{msg}Try again?")
 
+    if args.dest:
+        args.dest = api.get_crs(args.dest)
+        result['trainServices'] = [
+            srv for srv in result['trainServices']
+            if args.dest in [s['crs'] for s in next_stations(srv)]
+        ]
+
     # TODO: other station shenaniganseries
 
-    disseminate(result, show_orig_time=args.show_orig_time, show_crs=args.show_crs,
-                next_stations=args.calling is not None, expand_stops=args.calling == 'list')
+    disseminate(
+        result,
+        show_orig_time=args.show_orig_time,
+        show_crs=args.show_crs,
+        show_next_stations=args.calling is not None,
+        dest=args.dest,
+        expand_stops=args.calling == 'list',
+    )
     services = result.get('trainServices', [])
     service = services[0]
